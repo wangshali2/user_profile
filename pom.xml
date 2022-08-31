@@ -11,7 +11,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.atguigu</groupId>
-    <artifactId>user-profile-manager0212</artifactId>
+    <artifactId>user_profile_manager_0411</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>user-profile-manager</name>
     <description>user-profile-manager</description>

@@ -51,6 +51,38 @@ public class UserGroupController {
     }
 
 
+    /**
+     * 分群的保存
+     *
+     * 1   要把分群的基本信息要保存起来
+     *          mysql
+     *
+     * 2   根据分群基本信息的条件，在clickhouse中进行计算获得人群包（uid的集合)
+     *         保存在clickhouse中
+     *
+     * 3   把clickhouse中的人群包数据转存在redis中，便于高频访问。
+     */
+
+    @PostMapping("/user-group")
+    public  String createUserGroup(@RequestBody UserGroup userGroup ){
+
+        System.out.println(userGroup);
+      //  userGroupService.saveOrUpdate(userGroup);
+//     * 1   要把分群的基本信息要保存起来  mysql
+        userGroupService.saveUserGroupInfo(userGroup);
+
+   //    2   根据分群基本信息的条件，在clickhouse中进行计算获得人群包（uid的集合)
+   //         保存在clickhouse中
+        userGroupService.genUserGroup(userGroup);
+
+
+
+
+
+        return "success";
+
+    }
+
 
 
 }

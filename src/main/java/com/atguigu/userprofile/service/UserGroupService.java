@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 public interface UserGroupService  extends IService<UserGroup> {
 
+    public void saveUserGroupInfo(UserGroup userGroup);
+
+    public void genUserGroup(UserGroup userGroup);
 
 
 }

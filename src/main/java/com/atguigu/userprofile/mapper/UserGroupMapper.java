@@ -23,6 +23,10 @@ import java.util.List;
 @DS("mysql")
 public interface UserGroupMapper extends BaseMapper<UserGroup> {
 
+    @Insert("${sql}")
+    @DS("clickhouse")
+    public  void  insertBitmapSQL(@Param("sql") String sql);
+
 
 
 }

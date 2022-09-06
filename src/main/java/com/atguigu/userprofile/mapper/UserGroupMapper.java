@@ -27,6 +27,23 @@ public interface UserGroupMapper extends BaseMapper<UserGroup> {
     @DS("clickhouse")
     public  void  insertBitmapSQL(@Param("sql") String sql);
 
+    //mybatis 每行数据会封装到list中每个元素   要进入list多个元素 ，要把clickhouse中的array炸开为多行
+    @Select("select   arrayJoin( bitmapToArray(us)) from user_group where user_group_id=#{userGroupId}")
+    @DS("clickhouse")
+    public  String[] selectUidList(@Param("userGroupId") String userGroupId);
 
+    @Select("${sql}")
+    @DS("clickhouse")
+    public  String[] selectUidListBySQL(@Param("sql") String sql);
+
+
+    @Select("${sql}")
+    @DS("clickhouse")
+    public Long  selectUserGroupNum(@Param("sql") String sql);
+
+
+    @Delete("  alter table user_group delete where user_group_id=#{userGroupId}")
+    @DS("clickhouse")
+    public  void  deleteUserGroup(@Param("userGroupId") String userGroupId);
 
 }

@@ -50,19 +50,33 @@ public class UserGroupServiceImpl extends ServiceImpl<UserGroupMapper, UserGroup
         userGroup.setConditionComment(conditionComment);
         // 3 创建日期
         userGroup.setCreateTime(new Date());
+
+
+
         // 4 保存到mysql中
         super.saveOrUpdate(userGroup);
 
     }
 
+    /**
+     * 写入clickhouse
+     * 1 先清理已有的usergroup
+     * 2 再新增usergroup
+     * @param userGroup
+     */
     @Override
     public void genUserGroup(UserGroup userGroup) {
         //执行sql
         String insertSelectSQL = getInsertSelectSQL(userGroup);
 
+        //   清理已有的userGroup
+        baseMapper.deleteUserGroup(userGroup.getId().toString());
+       //
         super.baseMapper.insertBitmapSQL(insertSelectSQL);
         System.out.println(insertSelectSQL);
     }
+
+
 
     //负责生成insert select sql
     // 把insert select 拼接到 bitmapAnd()
@@ -189,6 +203,68 @@ public class UserGroupServiceImpl extends ServiceImpl<UserGroupMapper, UserGroup
                 return "not in";
         }
         throw  new RuntimeException("操作符不正确");
+    }
+
+
+    @Override
+    public Long saveToRedis(UserGroup userGroup) {
+        // 1  得到分群的计算结果   查询clickhouse
+        // 此处依赖clickhouse的写入结果，更新时会有查询出旧数据的情况
+        // String[] uidArr=   super.baseMapper.selectUidList(userGroup.getId().toString());
+        // 1  重新计算 得到uidArr 不依赖clickhouse写入结果  直接计算
+        String bitmapAndSQL = getBitmapAndSQL(userGroup);
+        String uidArrSQL="select  arrayJoin(bitmapToArray("+bitmapAndSQL+"))";
+
+        String[] uidArr = baseMapper.selectUidListBySQL(uidArrSQL);
+
+        // 2  把计算结果（人群包) 保存到 redis中
+        //  type ?  string(1对1 还是1对多 )  list(有没有重复,非幂等)   set (判存场景，去重，幂等)    zset(要不要排序) hash（单值 ，还是键值对）
+        //  key ?     user_group:101      value ?    uids             field (hash)/score (zset) 无
+        //  写api  ?  sadd        读api?  smembers 全读    sismember 判存   scard  统计个数
+        //  过期 时间?  临时数据  缓存    此场景不是缓存 也不是临时数据 不设过期时间
+
+        Jedis jedis = RedisUtil.getJedis();
+        String userGroupKey="user_group:"+userGroup.getId();
+        // 清理已有的usergroup
+        jedis.del(userGroupKey);
+
+
+      //  String[] uidArr = uidList.toArray(new String[]{});
+        jedis.sadd(userGroupKey,uidArr);
+
+
+        jedis.close();
+
+        return uidArr.length+0L;
+
+    }
+
+    @Override
+    public Long getUserGroupNum(UserGroup userGroup) {
+       // 1  组合sql   获得bitmapAndSQL  拼接 select bitmapCardinality( bitmapAndSQL ) ;
+        String bitmapAndSQL = getBitmapAndSQL(userGroup);
+        String userGroupNumSQL=" select bitmapCardinality( "+bitmapAndSQL+" )";
+
+        // 2  执行该sql 获得Long结果
+        Long userGroupNum = baseMapper.selectUserGroupNum(userGroupNumSQL);
+
+        return userGroupNum;
+    }
+
+    /**
+     * 根据主键查询usergroup基本信息
+     * @param userGroupId
+     * @param busiDate
+     * @return
+     */
+    @Override
+    public UserGroup getUserGroupInfo(String userGroupId, String busiDate) {
+        UserGroup userGroup = getById(userGroupId);
+        String conditionJsonStr = userGroup.getConditionJsonStr();
+        List<TagCondition> tagConditionList = JSON.parseArray(conditionJsonStr, TagCondition.class);
+        userGroup.setTagConditions(tagConditionList);
+        userGroup.setBusiDate(busiDate);
+        return userGroup;
     }
 
 

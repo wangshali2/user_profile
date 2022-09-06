@@ -74,13 +74,40 @@ public class UserGroupController {
    //    2   根据分群基本信息的条件，在clickhouse中进行计算获得人群包（uid的集合)
    //         保存在clickhouse中
         userGroupService.genUserGroup(userGroup);
+   //3   把clickhouse中的人群包数据转存在redis中，便于高频访问。
+        Long userGroupNum = userGroupService.saveToRedis(userGroup);
 
-
-
-
-
+    //4 把计算后的人群个数再次写入mysql
+        userGroup.setUserGroupNum(userGroupNum);
+        userGroupService.saveUserGroupInfo(userGroup);
         return "success";
 
+    }
+
+    @PostMapping("/user-group-evaluate")
+    public  Long userGroupEvaluate(@RequestBody UserGroup userGroup){
+            // 1  查询等多个bitmap 进行交集 ，得到bitmap的元素个数
+
+          Long  userGroupNum=  userGroupService.getUserGroupNum(  userGroup);
+          return  userGroupNum;
+    }
+
+    @PostMapping("/user-group-refresh/{id}")
+    public  String userGroupRefresh(@PathVariable("id") String userGroupId,
+                                    @RequestParam("busiDate") String busiDate ){
+        //  1  活动的userGroup的基本信息  根据userGroupId查询UserGroup对象
+         UserGroup userGroup= userGroupService.getUserGroupInfo(  userGroupId,busiDate);
+
+        // 2 重新计算人群包 clickhouse
+        userGroupService.genUserGroup(userGroup);  //先清理 在写入
+
+        // 3 重新写入redis
+        Long userGroupNum = userGroupService.saveToRedis(userGroup); //先清理 在写入
+
+        //4 把计算后的人群个数再次写入mysql
+        userGroup.setUserGroupNum(userGroupNum);
+        userGroupService.saveUserGroupInfo(userGroup);
+        return  "success";
     }
 
 

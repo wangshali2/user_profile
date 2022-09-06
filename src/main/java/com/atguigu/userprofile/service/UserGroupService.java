@@ -15,4 +15,14 @@ public interface UserGroupService  extends IService<UserGroup> {
     public void genUserGroup(UserGroup userGroup);
 
 
+    public Long saveToRedis(UserGroup userGroup);
+
+
+
+    public Long getUserGroupNum( UserGroup userGroup);
+
+
+    public UserGroup  getUserGroupInfo( String userGroupId,String busiDate);
+
+
 }
